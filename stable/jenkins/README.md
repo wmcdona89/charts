@@ -374,6 +374,66 @@ rbac:
   install: true
 ```
 
+### Config as Code for multiple agents
+
+Below is an example of a `values.yaml` file which creates multiple agents via JCasC. Agents can be defined as arrays and/or objects.
+
+Note: The `agentList`, `agentHierarchy.maven`, and `baseAgent` names can be changed along with the corresponding references in the JCasC.
+
+```yaml
+agent:
+  enabled: true
+  podName: default
+  resources:
+    limits:
+      cpu: 1024m
+      memory: 2048Mi
+
+# A list of agents. Each entry corresponds to a chart `agent` in terms of the values that can be set.
+agentList:
+- podName: maven
+  image: jenkins/jnlp-agent-maven
+- podName: maven-large
+  inheritFrom: maven
+  resources:
+    requests:
+      cpu: 1024m
+      memory: 2048Mi
+    limits:
+      cpu: 1024m
+      memory: 2048Mi
+
+# A hierarchy of agents. Useful when creating a custom chart to allow values to be overridden.
+# Each object corresponds to a chart `agent` in terms of the values that can be set.
+agentHierarchy:
+  node:
+    podName: node
+    image: jenkins/jnlp-agent-node
+  python:
+    podName: python
+    image: jenkins/jnlp-agent-python
+
+baseAgent: default
+
+# NOTE: `set` modifies the input hash so `.Values.agent` is saved at the start and restored at the end
+master:
+  JCasC:
+    configScripts:
+      agents: |
+        jenkins:
+          clouds:
+          - kubernetes:
+              defaultsProviderTemplate: {{ .Values.baseAgent }}
+              templates:
+                {{- $agent := .Values.agent }}
+                {{- tpl (include "jenkins.agent-jcasc" .) . | nindent 6 }}
+                {{- range .Values.agentList }}
+                {{- tpl (include "jenkins.agent-jcasc" (set $ "Values" (set $.Values "agent" .))) $ | nindent 6 }}
+                {{- end }}
+                {{- tpl (include "jenkins.agent-jcasc" (set . "Values" (set .Values "agent" .Values.agentHierarchy.maven))) . | nindent 6 }}
+                {{- $_ := set .Values "agent" $agent }}
+```
+
 ## RBAC
 
 RBAC is enabled by default if you want to disable it you will need to do the following:

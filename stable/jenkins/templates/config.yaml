@@ -84,7 +84,7 @@ data:
                   <privileged>false</privileged>
 {{- end }}
                   <alwaysPullImage>{{ .Values.agent.alwaysPullImage }}</alwaysPullImage>
-                  <workingDir>/home/jenkins</workingDir>
+                  <workingDir>{{ .Values.agent.workingDir }}</workingDir>
                   <command>{{ .Values.agent.command }}</command>
 {{- if .Values.agent.args }}
                   <args>{{ .Values.agent.args }}</args>

@@ -443,6 +443,8 @@ agent:
 
   # Executed command when side container gets started
   command:
+  # Default args value is "${computer.jnlpmac} ${computer.name}" but JCasC requires
+  # escaping with ^$ so the value is hardcoded in the templates and applied conditionally.
   args:
   # Side container name
   sideContainerName: "jnlp"
@@ -469,6 +471,7 @@ agent:
   #       value: "value"
   # Timeout in seconds for an agent to be online
   slaveConnectTimeout: 100
+  workingDir: "/home/jenkins"
 
 persistence:
   enabled: true

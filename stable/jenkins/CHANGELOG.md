@@ -5,6 +5,14 @@ numbering uses [semantic versioning](http://semver.org).
 
 NOTE: The change log until version 1.5.7 is auto generated based on git commits. Those include a reference to the git commit to be able to get more details.
 
+## 1.10.2 Support multiple agents in JCasC
+
+Support using the chart's agent configuration to configure multiple agents in JCasC (rather than explicitly configuring podTemplates in JCasC). See the README for an example.
+
+Add template `agent-jcasc` to generate an agent (podTemplate).
+
+Make `agent.workingDir` configurable.
+
 ## 1.10.1 Only copy JCasC files if there are any
 
 The chart always tried to copy Configuration as Code configs even if there are none. That resulted in an error which is resolved with this.

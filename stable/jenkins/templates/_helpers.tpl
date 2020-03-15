@@ -101,6 +101,7 @@ jenkins:
       serverUrl: "https://kubernetes.default"
       {{- if .Values.agent.enabled }}
       templates:
+      {{- tpl ( include "jenkins.agent-jcasc" . ) . | nindent 6 }}
       {{- end }}
   {{- if .Values.master.csrf.defaultCrumbIssuer.enabled }}
   crumbIssuer:
@@ -160,7 +161,9 @@ Create the name of the service account for Jenkins agents to use
     {{- else }}
     args: "^${computer.jnlpmac} ^${computer.name}"
     {{- end }}
-    command: {{ .Values.agent.command | default "" | quote }}
+    {{- if not ( kindIs "invalid" .Values.agent.command ) }}
+    command: {{ .Values.agent.command | quote }}
+    {{- end }}
     envVars:
     - containerEnvVar:
         key: "JENKINS_URL"
@@ -202,7 +205,7 @@ Create the name of the service account for Jenkins agents to use
   {{- end }}
   {{- if .Values.agent.yamlTemplate }}
   yaml: |-
-  {{- .Values.agent.yamlTemplate | nindent 4 }}
+  {{- tpl .Values.agent.yamlTemplate . | nindent 4 }}
   {{- end }}
   yamlMergeStrategy: "override"
 {{- end }}

@@ -472,6 +472,7 @@ agent:
   #       value: "value"
   # Timeout in seconds for an agent to be online
   slaveConnectTimeout: 100
+  workingDir: "/home/jenkins"
 
 persistence:
   enabled: true

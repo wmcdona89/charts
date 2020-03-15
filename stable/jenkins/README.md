@@ -206,9 +206,10 @@ Some third-party systems, e.g. GitHub, use HTML-formatted data in their payload 
 | `agent.privileged`         | Agent privileged container                      | `false`                |
 | `agent.resources`          | Resources allocation (Requests and Limits)      | `{requests: {cpu: 512m, memory: 512Mi}, limits: {cpu: 512m, memory: 512Mi}}`|
 | `agent.volumes`            | Additional volumes                              | `[]`                   |
+| `agent.podRetention`       | Agent Pod retention after build completes       | `Never`       |
 | `agent.envVars`            | Environment variables for the agent Pod         | `[]`                   |
 | `agent.command`            | Executed command when side container starts     | Not set                |
-| `agent.args`               | Arguments passed to executed command            | Not set                |
+| `agent.args`               | Arguments passed to executed command            | `${computer.jnlpmac} ${computer.name}`|
 | `agent.sideContainerName`  | Side container name in agent                    | jnlp                   |
 | `agent.TTYEnabled`         | Allocate pseudo tty to the side container       | false                  |
 | `agent.containerCap`       | Maximum number of agent                         | 10                     |
@@ -216,6 +217,7 @@ Some third-party systems, e.g. GitHub, use HTML-formatted data in their payload 
 | `agent.idleMinutes`        | Allows the Pod to remain active for reuse       | 0                      |
 | `agent.yamlTemplate`       | The raw yaml of a Pod API Object to merge into the agent spec | Not set                |
 | `agent.slaveConnectTimeout`| Timeout in seconds for an agent to be online    | 100                    |
+| `agent.workingDir`         | Working directory                               | `/home/jenkins`        |
 
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
@@ -385,6 +387,9 @@ agent:
   enabled: true
   podName: default
   resources:
+    requests:
+      cpu: 1024m
+      memory: 2048Mi
     limits:
       cpu: 1024m
       memory: 2048Mi
@@ -396,12 +401,9 @@ agentList:
 - podName: maven-large
   inheritFrom: maven
   resources:
-    requests:
-      cpu: 1024m
-      memory: 2048Mi
     limits:
       cpu: 1024m
-      memory: 2048Mi
+      memory: 4096Mi
 
 # A hierarchy of agents. Useful when creating a custom chart to allow values to be overridden.
 # Each object corresponds to a chart `agent` in terms of the values that can be set.
@@ -430,7 +432,8 @@ master:
                 {{- range .Values.agentList }}
                 {{- tpl (include "jenkins.agent-jcasc" (set $ "Values" (set $.Values "agent" .))) $ | nindent 6 }}
                 {{- end }}
-                {{- tpl (include "jenkins.agent-jcasc" (set . "Values" (set .Values "agent" .Values.agentHierarchy.maven))) . | nindent 6 }}
+                {{- tpl (include "jenkins.agent-jcasc" (set . "Values" (set .Values "agent" .Values.agentHierarchy.node))) . | nindent 6 }}
+                {{- tpl (include "jenkins.agent-jcasc" (set . "Values" (set .Values "agent" .Values.agentHierarchy.python))) . | nindent 6 }}
                 {{- $_ := set .Values "agent" $agent }}
 ```
 

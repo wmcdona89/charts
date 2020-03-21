@@ -380,21 +380,18 @@ rbac:
 
 Below is an example of a `values.yaml` file which creates multiple agents via JCasC. Agents can be defined as arrays and/or objects.
 
-Note: The `agentList`, `agentHierarchy.maven`, and `baseAgent` names can be changed along with the corresponding references in the JCasC.
+Note: The `agentList`, `agentHierarchy.node`, `agentHierarchy.python`, and `baseAgent` names are arbitrary and can be changed along with the corresponding references in the JCasC.
 
 ```yaml
 agent:
   enabled: true
   podName: default
   resources:
-    requests:
-      cpu: 1024m
-      memory: 2048Mi
     limits:
       cpu: 1024m
       memory: 2048Mi
 
-# A list of agents. Each entry corresponds to a chart `agent` in terms of the values that can be set.
+# A list of agents. Each entry corresponds to a chart `agent` in terms of the configurable values.
 agentList:
 - podName: maven
   image: jenkins/jnlp-agent-maven
@@ -402,11 +399,11 @@ agentList:
   inheritFrom: maven
   resources:
     limits:
-      cpu: 1024m
+      cpu: 2048m
       memory: 4096Mi
 
-# A hierarchy of agents. Useful when creating a custom chart to allow values to be overridden.
-# Each object corresponds to a chart `agent` in terms of the values that can be set.
+# A hierarchy of agents. Useful when creating a custom chart to allow individual values to be overridden.
+# Each object corresponds to a chart `agent` in terms of the configurable values.
 agentHierarchy:
   node:
     podName: node

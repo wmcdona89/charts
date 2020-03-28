@@ -101,7 +101,7 @@ jenkins:
       serverUrl: "https://kubernetes.default"
       {{- if .Values.agent.enabled }}
       templates:
-      {{- tpl ( include "jenkins.agent-jcasc" . ) . | nindent 6 }}
+      {{- include "jenkins.agent-jcasc" . | nindent 6 }}
       {{- end }}
   {{- if .Values.master.csrf.defaultCrumbIssuer.enabled }}
   crumbIssuer:
@@ -152,10 +152,15 @@ Create the name of the service account for Jenkins agents to use
 {{- end -}}
 {{- end -}}
 
+{{/*
+Returns agent configuration as code
+*/}}
 {{- define "jenkins.agent-jcasc" -}}
+{{- if .Values.agent.enabled -}}
 - name: "{{ .Values.agent.podName }}"
   containers:
-  - alwaysPullImage: {{ .Values.agent.alwaysPullImage }}
+  - name: "{{ .Values.agent.sideContainerName }}"
+    alwaysPullImage: {{ .Values.agent.alwaysPullImage }}
     {{- if .Values.agent.args }}
     args: "{{ .Values.agent.args }}"
     {{- else }}
@@ -173,7 +178,6 @@ Create the name of the service account for Jenkins agents to use
     {{- else }}
     image: "{{ .Values.agent.image }}:{{ .Values.agent.tag }}"
     {{- end }}
-    name: "{{ .Values.agent.sideContainerName }}"
     privileged: "{{- if .Values.agent.privileged }}true{{- else }}false{{- end }}"
     {{- if .Values.agent.resources }}
     {{- if .Values.agent.resources.limits }}
@@ -205,7 +209,8 @@ Create the name of the service account for Jenkins agents to use
   {{- end }}
   {{- if .Values.agent.yamlTemplate }}
   yaml: |-
-  {{- tpl .Values.agent.yamlTemplate . | nindent 4 }}
+  {{- tpl .Values.agent.yamlTemplate . | trim | nindent 4 }}
   {{- end }}
   yamlMergeStrategy: "override"
-{{- end }}
+{{- end -}}
+{{- end -}}

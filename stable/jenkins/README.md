@@ -378,43 +378,41 @@ rbac:
 
 ### Config as Code for multiple agents
 
-Below is an example of a `values.yaml` file which creates multiple agents via JCasC. Agents can be defined as arrays and/or objects.
-
-Note: The `agentList`, `agentHierarchy.node`, `agentHierarchy.python`, and `baseAgent` names are arbitrary and can be changed along with the corresponding references in the JCasC.
+Below is an example `values.yaml` file which creates multiple agents via JCasC. This example includes an array of agents (`agentList`) and an object hierarchy of agents (`agentHierarchy`). The JCasC in this example treats `agent` as the "base" agent and merges it into all other agents. In lieu of `merge`, all values could be explicitly defined in agents.
 
 ```yaml
 agent:
   enabled: true
   podName: default
+  customJenkinsLabels: default
   resources:
     limits:
       cpu: 1024m
       memory: 2048Mi
 
-# A list of agents. Each entry corresponds to a chart `agent` in terms of the configurable values.
+# An array of agents. Each entry corresponds to a chart `agent` in terms of the configurable values.
+# The `agentList` name is arbitrary and can be changed along with the corresponding references in the JCasC.
 agentList:
-- podName: maven
-  image: jenkins/jnlp-agent-maven
-- podName: maven-large
-  inheritFrom: maven
-  resources:
-    limits:
-      cpu: 2048m
-      memory: 4096Mi
-
-# A hierarchy of agents. Useful when creating a custom chart to allow individual values to be overridden.
-# Each object corresponds to a chart `agent` in terms of the configurable values.
-agentHierarchy:
-  node:
-    podName: node
+  - podName: maven
+    customJenkinsLabels: maven
+    image: jenkins/jnlp-agent-maven
+  - podName: node
+    customJenkinsLabels: node
     image: jenkins/jnlp-agent-node
+
+# An object hierarchy of agents. Useful when creating a custom chart to allow individual values to be overridden.
+# Each object corresponds to a chart `agent` in terms of the configurable values. The `agentHierarchy.python` and 
+# `agentHierarchy.ruby` names are arbitrary and can be changed along with the corresponding references in the JCasC.
+agentHierarchy:
   python:
     podName: python
+    customJenkinsLabels: python
     image: jenkins/jnlp-agent-python
+  ruby:
+    podName: ruby
+    customJenkinsLabels: ruby
+    image: jenkins/jnlp-agent-ruby
 
-baseAgent: default
-
-# NOTE: `set` modifies the input hash so `.Values.agent` is saved at the start and restored at the end
 master:
   JCasC:
     configScripts:
@@ -422,16 +420,24 @@ master:
         jenkins:
           clouds:
           - kubernetes:
-              defaultsProviderTemplate: {{ .Values.baseAgent }}
               templates:
-                {{- $agent := .Values.agent }}
-                {{- tpl (include "jenkins.agent-jcasc" .) . | nindent 6 }}
-                {{- range .Values.agentList }}
-                {{- tpl (include "jenkins.agent-jcasc" (set $ "Values" (set $.Values "agent" .))) $ | nindent 6 }}
-                {{- end }}
-                {{- tpl (include "jenkins.agent-jcasc" (set . "Values" (set .Values "agent" .Values.agentHierarchy.node))) . | nindent 6 }}
-                {{- tpl (include "jenkins.agent-jcasc" (set . "Values" (set .Values "agent" .Values.agentHierarchy.python))) . | nindent 6 }}
-                {{- $_ := set .Values "agent" $agent }}
+        {{- /* chart agent */}}
+        {{- include "jenkins.agent-jcasc" . | indent 6 }}
+
+        {{- /* save chart agent as `set` modifies the input dictionary */}}
+        {{- $agent := .Values.agent }}
+
+        {{- /* agentList */}}
+        {{- range .Values.agentList }}
+        {{- include "jenkins.agent-jcasc" (set $ "Values" (set $.Values "agent" (merge . $agent))) | nindent 6 }}
+        {{- end }}
+
+        {{- /* agentHierarchy */}}
+        {{- include "jenkins.agent-jcasc" (set . "Values" (set .Values "agent" (merge .Values.agentHierarchy.python $agent))) | nindent 6 }}
+        {{- include "jenkins.agent-jcasc" (set . "Values" (set .Values "agent" (merge .Values.agentHierarchy.ruby $agent))) | nindent 6 }}
+
+        {{- /* restore chart agent */}}
+        {{- $_ := set .Values "agent" $agent }}
 ```
 
 ## RBAC

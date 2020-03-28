@@ -206,9 +206,10 @@ Some third-party systems, e.g. GitHub, use HTML-formatted data in their payload 
 | `agent.privileged`         | Agent privileged container                      | `false`                |
 | `agent.resources`          | Resources allocation (Requests and Limits)      | `{requests: {cpu: 512m, memory: 512Mi}, limits: {cpu: 512m, memory: 512Mi}}`|
 | `agent.volumes`            | Additional volumes                              | `[]`                   |
+| `agent.podRetention`       | Agent Pod retention after build completes       | `Never`       |
 | `agent.envVars`            | Environment variables for the agent Pod         | `[]`                   |
 | `agent.command`            | Executed command when side container starts     | Not set                |
-| `agent.args`               | Arguments passed to executed command            | Not set                |
+| `agent.args`               | Arguments passed to executed command            | `${computer.jnlpmac} ${computer.name}`|
 | `agent.sideContainerName`  | Side container name in agent                    | jnlp                   |
 | `agent.TTYEnabled`         | Allocate pseudo tty to the side container       | false                  |
 | `agent.containerCap`       | Maximum number of agent                         | 10                     |
@@ -216,6 +217,7 @@ Some third-party systems, e.g. GitHub, use HTML-formatted data in their payload 
 | `agent.idleMinutes`        | Allows the Pod to remain active for reuse       | 0                      |
 | `agent.yamlTemplate`       | The raw yaml of a Pod API Object to merge into the agent spec | Not set                |
 | `agent.slaveConnectTimeout`| Timeout in seconds for an agent to be online    | 100                    |
+| `agent.workingDir`         | Working directory                               | `/home/jenkins`        |
 
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
@@ -372,6 +374,70 @@ master:
       enabled: true
 rbac:
   install: true
+```
+
+### Config as Code for multiple agents
+
+Below is an example `values.yaml` file which creates multiple agents via JCasC. This example includes an array of agents (`agentList`) and an object hierarchy of agents (`agentHierarchy`). The JCasC in this example treats `agent` as the "base" agent and merges it into all other agents. In lieu of `merge`, all values could be explicitly defined in agents.
+
+```yaml
+agent:
+  enabled: true
+  podName: default
+  customJenkinsLabels: default
+  resources:
+    limits:
+      cpu: 1024m
+      memory: 2048Mi
+
+# An array of agents. Each entry corresponds to a chart `agent` in terms of the configurable values.
+# The `agentList` name is arbitrary and can be changed along with the corresponding references in the JCasC.
+agentList:
+  - podName: maven
+    customJenkinsLabels: maven
+    image: jenkins/jnlp-agent-maven
+  - podName: node
+    customJenkinsLabels: node
+    image: jenkins/jnlp-agent-node
+
+# An object hierarchy of agents. Useful when creating a custom chart to allow individual values to be overridden.
+# Each object corresponds to a chart `agent` in terms of the configurable values. The `agentHierarchy.python` and 
+# `agentHierarchy.ruby` names are arbitrary and can be changed along with the corresponding references in the JCasC.
+agentHierarchy:
+  python:
+    podName: python
+    customJenkinsLabels: python
+    image: jenkins/jnlp-agent-python
+  ruby:
+    podName: ruby
+    customJenkinsLabels: ruby
+    image: jenkins/jnlp-agent-ruby
+
+master:
+  JCasC:
+    configScripts:
+      agents: |
+        jenkins:
+          clouds:
+          - kubernetes:
+              templates:
+        {{- /* chart agent */}}
+        {{- include "jenkins.agent-jcasc" . | indent 6 }}
+
+        {{- /* save chart agent as `set` modifies the input dictionary */}}
+        {{- $agent := .Values.agent }}
+
+        {{- /* agentList */}}
+        {{- range .Values.agentList }}
+        {{- include "jenkins.agent-jcasc" (set $ "Values" (set $.Values "agent" (merge . $agent))) | nindent 6 }}
+        {{- end }}
+
+        {{- /* agentHierarchy */}}
+        {{- include "jenkins.agent-jcasc" (set . "Values" (set .Values "agent" (merge .Values.agentHierarchy.python $agent))) | nindent 6 }}
+        {{- include "jenkins.agent-jcasc" (set . "Values" (set .Values "agent" (merge .Values.agentHierarchy.ruby $agent))) | nindent 6 }}
+
+        {{- /* restore chart agent */}}
+        {{- $_ := set .Values "agent" $agent }}
 ```
 
 ## RBAC

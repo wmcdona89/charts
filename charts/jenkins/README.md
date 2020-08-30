@@ -2,7 +2,7 @@
 
 [Jenkins](https://www.jenkins.io/) is the leading open source automation server, Jenkins provides hundreds of plugins to support building, deploying and automating any project.
 
-This chart installs a Jenkins server which allows to spawn agents on [Kubernetes](http://kubernetes.io) utilizing the [Jenkins Kubernetes plugin](https://plugins.jenkins.io/kubernetes/).
+This chart installs a Jenkins server which allows spawning agents on [Kubernetes](http://kubernetes.io) utilizing the [Jenkins Kubernetes plugin](https://plugins.jenkins.io/kubernetes/).
 
 Inspired by the awesome work of [Carlos Sanchez](https://github.com/carlossg).
 
@@ -43,7 +43,7 @@ This removes all the Kubernetes components associated with the chart and deletes
 
 _See [helm uninstall](https://helm.sh/docs/helm/helm_uninstall/) for command documentation._
 
-## Upgrading Chart
+## Upgrade Chart
 
 ```console
 # Helm 3 or 2
@@ -54,7 +54,7 @@ _See [helm upgrade](https://helm.sh/docs/helm/helm_upgrade/) for command documen
 
 ### From stable repo
 
-Upgrade existing releases from `stable/jenkins` to `jenkinsci/jenkins` should be seamless by ensuring you have the lates [repo info](#get-repo-info), and running the [upgrade commands](#upgrading-chart) specifying the `jenkinsci/jenkins` chart.
+Upgrade an existing release from `stable/jenkins` to `jenkinsci/jenkins` seamlessly by ensuring you have the latest [repo info](#get-repo-info) and running the [upgrade commands](#upgrade-chart) specifying the `jenkinsci/jenkins` chart.
 
 ### Major Version Upgrades
 
@@ -149,15 +149,16 @@ In order to upgrade, [uninstall](#uninstall-chart) the Jenkins Deployment before
 See [Customizing the Chart Before Installing](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing). To see all configurable options with detailed comments, visit the chart's [values.yaml](./values.yaml), or run these configuration commands:
 
 ```console
-# Helm 2
-$ helm inspect values jenkinsci/jenkins
-
 # Helm 3
 $ helm show values jenkinsci/jenkins
+
+# Helm 2
+$ helm inspect values jenkinsci/jenkins
 ```
 
+For a summary of all configurable options, see [VALUES_SUMMARY.md](./VALUES_SUMMARY.md)
 
-### Mounting Volumes into Your Agent Pods
+### Mounting Volumes into Agent Pods
 
 Your Jenkins Agents will run as pods, and it's possible to inject volumes where needed:
 
@@ -176,19 +177,12 @@ Each type supports a different set of configurable attributes, defined by [the c
 
 To make use of the NetworkPolicy resources created by default, install [a networking plugin that implements the Kubernetes NetworkPolicy spec](https://kubernetes.io/docs/tasks/administer-cluster/declare-network-policy#before-you-begin).
 
-For Kubernetes `v1.5` & `v1.6`, you must also turn on NetworkPolicy by setting the DefaultDeny namespace annotation.
-Note: this will enforce policy for _all_ pods in the namespace:
+[Install](#install-chart) helm chart with network policy enabled by setting `networkPolicy.enabled` to `true`.
 
-```console
-kubectl annotate namespace default "net.beta.kubernetes.io/network-policy={\"ingress\":{\"isolation\":\"DefaultDeny\"}}"
-```
-
-[Install](#install-chart) helm chart with network policy enabled, by setting `networkPolicy.enabled` to `true`.
-
-You can use `master.networkPolicy.internalAgents` and `master.networkPolicy.externalAgents` stanzas to fine grained controls over where internal/external agents can connect from.
+You can use `master.networkPolicy.internalAgents` and `master.networkPolicy.externalAgents` stanzas for fine-grained controls over where internal/external agents can connect from.
 Internal ones are allowed based on pod labels and (optionally) namespaces, and external ones are allowed based on IP ranges.
 
-### Adding Customized securityRealm
+### Custom Security Realm
 
 `master.securityRealm` in values can be used to support custom security realm instead of default `LegacySecurityRealm`.
 For example, you can add a security realm to authenticate via keycloak:
@@ -205,7 +199,7 @@ securityRealm: |-
   </securityRealm>
 ```
 
-### Adding Additional Configs
+### Additional Configs
 
 `master.additionalConfig` can be used to add additional config files in `config.yaml`.
 For example, it can be used to add additional config files for keycloak authentication:
@@ -218,7 +212,7 @@ additionalConfig:
       clientURL: testUrl
 ```
 
-### Adding Customized Labels
+### Custom Labels
 
 `master.serviceLabels` can be used to add custom labels in `jenkins-master-svc.yaml`.
 For example:
@@ -246,7 +240,7 @@ See additional `persistence` values using [configuration commands](#configuratio
 #### Storage Class
 
 It is possible to define which storage class to use, by setting `persistence.storageClass` to `[customStorageClass]`.
-If set to a dash (`-`), the dynamic provision is disabled.
+If set to a dash (`-`), dynamic provisioning is disabled.
 If the storage class is set to null or left undefined (`""`), the default provisioner is used (gp2 on AWS, standard on GKE, AWS & OpenStack).
 
 ### Configuration as Code
@@ -255,10 +249,10 @@ Jenkins Configuration as Code is now a standard component in the Jenkins project
 Add a key under configScripts for each configuration area, where each corresponds to a plugin or section of the UI.
 The keys (prior to `|` character) are just labels, and can be any value.
 They are only used to give the section a meaningful name.
-The only restriction is they must conform to RFC 1123 definition of a DNS label, so may only contain lowercase letters, numbers, and hyphens.
+The only restriction is they must conform to RFC 1123 definition of a DNS label, so they may only contain lowercase letters, numbers, and hyphens.
 Each key will become the name of a configuration yaml file on the master in /var/jenkins_home/casc_configs (by default) and will be processed by the Configuration as Code Plugin during Jenkins startup.
 The lines after each `|` become the content of the configuration yaml file.
-The first line after this is a JCasC root element, eg jenkins, credentials, etc.
+The first line after this is a JCasC root element, e.g. jenkins, credentials, etc.
 Best reference is the Documentation link here: `https://<jenkins_url>/configuration-as-code`.
 The example below creates ldap settings:
 
@@ -279,13 +273,16 @@ configScripts:
 
 Further JCasC examples can be found [here](https://github.com/jenkinsci/configuration-as-code-plugin/tree/master/demos).
 
-#### Config as Code With and Without Auto-Reload
+#### Config as Code With or Without Auto-Reload
 
-Config as Code changes (to `master.JCasC.configScripts`) can either force a new pod to be created and only be applied at next startup, or can be auto-reloaded on-the-fly.
-If you set `master.sidecars.autoConfigReload.enabled` to `true`, a second, auxiliary container will be installed into the Jenkins master pod, known as a "sidecar".
-This watches for changes to configScripts, copies the content onto the Jenkins file-system and issues a POST to `http://<jenkins_url>/reload-configuration-as-code` with a pre-shared key.
-You can monitor this sidecar's logs using command `kubectl logs <master_pod> -c jenkins-sc-config -f`.
-If you want to enable auto-reload then you also need to configure rbac as the container which triggers the reload needs to watch the config maps:
+Config as Code (`master.JCasC.configScripts`) is stored in kubernetes ConfigMaps
+
+##### With Auto-Reload
+
+If you set `master.sidecars.autoConfigReload.enabled` to `true`, a second container, known as a "sidecar", will run in the Jenkins master pod to auto-reload Config as Code changes on-the-fly.
+You also need to set `rbac.create` to `true` as the sidecar needs permissions to watch the kubernetes ConfigMaps.
+When the sidecar detects Config as Code changes, it copies the content onto the Jenkins filesystem and issues a POST to `http://<jenkins_url>/reload-configuration-as-code` with a pre-shared key.
+You can monitor the sidecar's logs using the command `kubectl logs <master_pod> -c jenkins-sc-config -f`.
 
 ```yaml
 master:
@@ -298,9 +295,21 @@ rbac:
   create: true
 ```
 
+##### Without Auto-Reload
+
+When Config as Code auto-reload is disabled, a sidecar is not created and Config as Code changes are not applied until the next startup.
+```yaml
+master:
+  JCasC:
+    enabled: true
+  sidecars:
+    configAutoReload:
+      enabled: false
+```
+
 ### RBAC
 
-RBAC is enabled by default if you want to disable it you will need to set `rbac.create` to `false`.
+RBAC is enabled by default. If you want to disable it you will need to set `rbac.create` to `false`.
 
 ### Backup
 
@@ -312,10 +321,10 @@ To restore a backup, you can use the `kube-tasks` underlying tool called [skbn](
 The best way to do it would be using a `Job` to copy files from the desired backup tag to the Jenkins pod.
 See the [skbn in-cluster example](https://github.com/maorfr/skbn/tree/master/examples/in-cluster) for more details.
 
-### Run Jenkins as Non Root User
+### Run Jenkins as Non-Root User
 
 The default settings of this helm chart let Jenkins run as root user with uid `0`.
-Due to security reasons you may want to run Jenkins as a non root user.
+Due to security reasons you may want to run Jenkins as a non-root user.
 Fortunately the default jenkins docker image `jenkins/jenkins` contains a user `jenkins` with uid `1000` that can be used for this purpose.
 
 Simply use the following settings to run Jenkins as `jenkins` user with uid `1000`:
@@ -370,7 +379,7 @@ master:
         <buildWrappers/>
 ```
 
-#### Structure of Jobs Directory
+#### Jobs Directory Structure
 
 ```console
 .
@@ -418,9 +427,9 @@ agent:
             resourceLimitMemory: "1024Mi"
 ```
 
-Best reference is `https://<jenkins_url>/configuration-as-code/reference#Cloud-kubernetes.`
+Best reference is `https://<jenkins_url>/configuration-as-code/reference#Cloud-kubernetes`.
 
-#### Adding Pod Templates Using additionalAgents
+### Adding Pod Templates Using additionalAgents
 
 `additionalAgents` may be used to configure additional kubernetes pod templates.
 Each additional agent corresponds to `agent` in terms of the configurable values and inherits all values from `agent` so you only need to specify values which differ.
@@ -459,7 +468,7 @@ additionalAgents:
 
 The master pod uses an Init Container to install plugins etc. If you are behind a corporate proxy it may be useful to set `master.initContainerEnv` to add environment variables such as `http_proxy`, so that these can be downloaded.
 
-Additionally, you may want to add env vars for the Jenkins container, and the JVM (`master.javaOpts`):
+Additionally, you may want to add env vars for the containers and JVM (`master.javaOpts`):
 
 ```yaml
 master:

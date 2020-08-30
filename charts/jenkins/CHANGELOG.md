@@ -3,7 +3,12 @@
 This file documents all notable changes to Jenkins Helm Chart. The release
 numbering uses [semantic versioning](http://semver.org).
 
-NOTE: The change log until version 1.5.7 is auto generated based on git commits. Those include a reference to the git commit to be able to get more details.
+Use the following links to reference issues, pull requests, and commits prior to v2.6.0.
+* Issues - https://github.com/helm/charts/issues/<issue>
+* Pull Requests - https://github.com/helm/charts/pull/<pr>
+* Commits - https://github.com/helm/charts/commit/<commit>/stable/jenkins
+
+The change log until v1.5.7 was auto generated based on git commits. Those include a reference to the git commit to be able to get more details.
 
 ## 2.6.0 First release in jenkinsci GitHub org
 
@@ -1332,6 +1337,8 @@ commit: e3e617a0b
 Merge branch 'master' into jenkins-test-timeout
 commit: 9a230a6b1
 
+Double retry count for Jenkins test
+commit: 129c8e824
 
 Jenkins: Update README | Master.ServiceAnnotations (#2757)
 commit: 6571810bc
@@ -1423,6 +1430,8 @@ commit: 03482f995
 
 Use consistent whitespace in template placeholders (#1437)
 commit: 912f50c71
+
+## 0.8.1
 
 add configurable service annotations #1234 (#1244)
 commit: 286861ca8
